@@ -1,10 +1,10 @@
 # Сборка Vue 3 фронтенда
 FROM node:20-alpine AS frontend-builder
 WORKDIR /app
-# 💡 ИСПРАВЛЕНО: Явно выдаем права на рабочую директорию, чтобы npm мог создавать папки
 RUN chown -R node:node /app
 COPY --chown=node:node package*.json ./
-RUN npm install
+# 💡 ИСПРАВЛЕНО: Добавлен флаг --no-audit для экономии памяти на диске
+RUN npm install --no-audit --progress=false
 COPY --chown=node:node . .
 RUN npm run build
 
@@ -12,7 +12,6 @@ RUN npm run build
 FROM php:8.4-fpm-alpine
 WORKDIR /var/www/html
 
-# Используем менеджер apk вместо apt-get для образов Alpine
 RUN apk update && apk add --no-cache \
     libpng-dev \
     libjpeg-turbo-dev \
