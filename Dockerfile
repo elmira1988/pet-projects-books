@@ -1,17 +1,8 @@
-# Сборка Vue 3 фронтенда
-FROM node:20-alpine AS frontend-builder
-WORKDIR /app
-RUN chown -R node:node /app
-COPY --chown=node:node package*.json ./
-# 💡 ИСПРАВЛЕНО: Добавлен флаг --no-audit для экономии памяти на диске
-RUN npm install --no-audit --progress=false
-COPY --chown=node:node . .
-RUN npm run build
-
 # Настройка продакшен PHP-окружения
 FROM php:8.4-fpm-alpine
 WORKDIR /var/www/html
 
+# Используем менеджер apk вместо apt-get для образов Alpine
 RUN apk update && apk add --no-cache \
     libpng-dev \
     libjpeg-turbo-dev \
@@ -23,10 +14,13 @@ RUN apk update && apk add --no-cache \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install pdo pdo_mysql gd bcmath
 
+# Просто копируем файлы проекта
+# (готовый скомпилированный фронтенд Vite уже будет лежать внутри папки public/build)
 COPY . .
-COPY --from=frontend-builder /app/public/build ./public/build
 
+# Устанавливаем Composer и зависимости Laravel
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 RUN composer install --no-dev --optimize-autoloader
 
+# Выдаем права на папки логов и кэша
 RUN chown -R www-data:www-data storage bootstrap/cache && chmod -R 775 storage bootstrap/cache

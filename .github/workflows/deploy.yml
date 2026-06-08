@@ -1,17 +1,56 @@
 name: Deploy BookStore to Server
 
+# Пайплайн запускается автоматически при каждом пуше в ветку main
 on:
   push:
-    branches: [ main ] # Пайплайн сработает автоматически, когда вы сделаете git push
+    branches: [ main ]
+
+# Принудительно включаем современную среду выполнения Node.js 24 для GitHub
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  deploy:
+  # 💡 ЭТАП 1: Тяжелая сборка фронтенда в облаке GitHub (Бесплатно и быстро)
+  build-frontend:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Скачиваем библиотеки npm и компилируем Vue-файлы через Vite
+      - name: Install dependencies and build Vue
+        run: |
+          npm install
+          npm run build
+
+      # Упаковываем готовую скомпилированную папку public/build в архив-артефакт
+      - name: Upload production assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: assets
+          path: public/build/
+
+  # 💡 ЭТАП 2: Легкий деплой на ваш VPS (Запускается только после успешного Этапа 1)
+  deploy:
+    needs: build-frontend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4.2.2
+
+      # Скачиваем готовый скомпилированный фронтенд обратно в проект перед отправкой команды на сервер
+      - name: Download compiled assets
+        uses: actions/download-artifact@v4
+        with:
+          name: assets
+          path: public/build/
+
+      # Подключаемся к вашему VPS по SSH и обновляем контейнеры
       - name: Deploy to VPS via SSH
         uses: appleboy/ssh-action@master
         with:
