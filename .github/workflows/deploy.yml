@@ -1,39 +1,48 @@
 name: Deploy BookStore to Server
 
-# Пайплайн запускается автоматически при каждом пуше в ветку main
 on:
   push:
     branches: [ main ]
 
-# Принудительно включаем современную среду выполнения Node.js 24 для GitHub
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  # 💡 ЭТАП 1: Тяжелая сборка фронтенда в облаке GitHub (Бесплатно и быстро)
+  # 💡 ЭТАП 1: Сборка фронтенда в облаке GitHub (ИСПРАВЛЕНО)
   build-frontend:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4.2.2
 
+      # 💡 ШАГ А: Настраиваем PHP в облаке GitHub
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, xml, ctype, iconv
+
+      # 💡 ШАГ Б: Скачиваем зависимости Composer, чтобы сгенерировать папку vendor и файлы Ziggy
+      - name: Install Composer Dependencies
+        run: composer install --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      # Скачиваем библиотеки npm и компилируем Vue-файлы через Vite
+      # Теперь npm run build пролетит без ошибок, так как vendor/tightenco/ziggy на месте!
       - name: Install dependencies and build Vue
         run: |
           npm install
           npm run build
 
-      # Упаковываем готовую скомпилированную папку public/build в архив-артефакт
       - name: Upload production assets
         uses: actions/upload-artifact@v4
         with:
           name: assets
           path: public/build/
+
 
   # 💡 ЭТАП 2: Легкий деплой на ваш VPS (Запускается только после успешного Этапа 1)
   deploy:
