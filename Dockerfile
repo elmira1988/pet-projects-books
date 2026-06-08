@@ -10,8 +10,15 @@ RUN npm run build
 FROM php:8.4-fpm-alpine
 WORKDIR /var/www/html
 
-# Установка расширений для работы Laravel с MySQL
-RUN apt-get update && apt-get install -y libpng-dev libjpeg-dev libfreetype6-dev zip unzip git \
+# 💡 ИСПРАВЛЕНО: Используем менеджер apk вместо apt-get для образов Alpine
+RUN apk update && apk add --no-cache \
+    libpng-dev \
+    libjpeg-turbo-dev \
+    freetype-dev \
+    zip \
+    unzip \
+    git \
+    bash \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install pdo pdo_mysql gd bcmath
 
