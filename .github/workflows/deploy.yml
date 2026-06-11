@@ -8,43 +8,44 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  # 💡 ЭТАП 1: Сборка фронтенда в облаке GitHub (ИСПРАВЛЕНО)
+  # 💡 ЭТАП 1: Сборка фронтенда в облаке GitHub
   build-frontend:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4.2.2
 
-      # 💡 ШАГ А: Настраиваем PHP в облаке GitHub
+      # Настраиваем PHP в облаке GitHub для работы с зависимостями
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
           extensions: mbstring, xml, ctype, iconv
 
-      # 💡 ШАГ Б: Скачиваем зависимости Composer, чтобы сгенерировать папку vendor и файлы Ziggy
+      # Скачиваем зависимости Composer, чтобы сгенерировать файлы автозагрузки и Ziggy
       - name: Install Composer Dependencies
         run: composer install --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
 
+      # Настраиваем Node.js для сборки Vue/Vite
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      # Теперь npm run build пролетит без ошибок, так как vendor/tightenco/ziggy на месте!
+      # Собираем готовый продакшн-фронтенд
       - name: Install dependencies and build Vue
         run: |
           npm install
           npm run build
 
+      # Сохраняем скомпилированные файлы во временное хранилище GitHub
       - name: Upload production assets
         uses: actions/upload-artifact@v4
         with:
           name: assets
           path: public/build/
 
-
-  # 💡 ЭТАП 2: Легкий деплой на ваш VPS (Запускается только после успешного Этапа 1)
+  # 💡 ЭТАП 2: Легкий деплой на ваш VPS
   deploy:
     needs: build-frontend
     runs-on: ubuntu-latest
@@ -52,14 +53,24 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4.2.2
 
-      # Скачиваем готовый скомпилированный фронтенд обратно в проект перед отправкой команды на сервер
+      # Скачиваем скомпилированный фронтенд обратно в воркфлоу перед отправкой
       - name: Download compiled assets
         uses: actions/download-artifact@v4
         with:
           name: assets
           path: public/build/
 
-      # Подключаемся к вашему VPS по SSH и обновляем контейнеры
+      # ⚡ ПЕРЕНОС ФАЙЛОВ: Копируем готовый фронтенд из GitHub на ваш сервер по SCP
+      - name: Copy assets to VPS via SCP
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          source: "public/build/*"
+          target: "/var/www/pet-projects-books/" # Буква 's' на конце обязательна!
+
+      # Подключаемся к вашему VPS по SSH и обновляем контейнеры Docker
       - name: Deploy to VPS via SSH
         uses: appleboy/ssh-action@master
         with:
@@ -67,16 +78,19 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
-            cd /var/www/pet-project-books
+            cd /var/www/pet-projects-books
             git pull origin main
+
+            # Пересобираем и запускаем контейнеры в фоновом режиме
             docker compose -f docker-compose.prod.yml up -d --build
 
+            # Устанавливаем и оптимизируем зависимости Composer внутри контейнера app
             docker compose -f docker-compose.prod.yml exec -T app composer install --no-dev --optimize-autoloader --no-interaction
 
-            # Очищаем кэш Laravel
+            # Очищаем и создаем свежий кэш Laravel, чтобы он увидел новые файлы
             docker compose -f docker-compose.prod.yml exec -T app php artisan config:cache
             docker compose -f docker-compose.prod.yml exec -T app php artisan route:cache
             docker compose -f docker-compose.prod.yml exec -T app php artisan view:cache
 
-            # Запускаем миграции базы данных
+            # Безопасно запускаем миграции базы данных
             docker compose -f docker-compose.prod.yml exec -T app php artisan migrate --force
