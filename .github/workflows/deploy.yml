@@ -68,7 +68,7 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           source: "public/build/*"
-          target: "/var/www/pet-projects-books/" # Буква 's' на конце обязательна!
+          target: "/var/www/pet-project-books/" # Буква 's' на конце обязательна!
 
       # Подключаемся к вашему VPS по SSH и обновляем контейнеры Docker
       - name: Deploy to VPS via SSH
@@ -78,7 +78,7 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
-            cd /var/www/pet-projects-books
+            cd /var/www/pet-project-books
             git pull origin main
 
             # Пересобираем и запускаем контейнеры в фоновом режиме
