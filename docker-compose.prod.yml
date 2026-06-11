@@ -1,5 +1,10 @@
 services:
   app:
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m" # файл лога не больше 10 Мегабайт
+        max-file: "3"   # хранить не более 3 старых файлов
     build:
       context: .
       dockerfile: Dockerfile
