@@ -19,8 +19,8 @@ RUN apk update && apk add --no-cache \
 COPY . .
 
 # Устанавливаем Composer и зависимости Laravel
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
-RUN composer install --no-dev --optimize-autoloader --no-scripts
+#COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+#RUN composer install --no-dev --optimize-autoloader --no-scripts
 
 # Выдаем права на папки логов и кэша
 RUN chown -R www-data:www-data storage bootstrap/cache && chmod -R 775 storage bootstrap/cache
