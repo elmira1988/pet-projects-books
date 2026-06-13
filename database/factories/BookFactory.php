@@ -17,15 +17,15 @@ class BookFactory extends Factory
      */
     public function definition(): array
     {
-        $randomPrice = $this->faker->numberBetween(300, 1500);
+        $randomPrice = $this->fake()->numberBetween(300, 1500);
         return [
             //'title' => $this->faker->sentence(3),
-            'title' => $this->faker->realText(20),
-            'author' => $this->faker->name(),
-            'isbn' => $this->faker->isbn13(),
+            'title' => $this->fake()->realText(20),
+            'author' => $this->fake()->name(),
+            'isbn' => $this->fake()->isbn13(),
             // Округляем до десятков: 543 превратится в 540, а 1257 в 1260
             'price' => round($randomPrice, -1),
-            'stock' => $this->faker->numberBetween(5, 50),
+            'stock' => $this->fake()->numberBetween(5, 50),
         ];
     }
 }
